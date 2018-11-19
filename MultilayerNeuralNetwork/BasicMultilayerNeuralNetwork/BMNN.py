@@ -1,8 +1,8 @@
 #coding=utf-8
 '''
 Created on 2014年11月15日
-
-@author: wangshuai13
+Modified on 2018年11月19日
+@author: wangshuai
 '''
 import numpy
 #import matplotlib.pyplot as plt
@@ -14,11 +14,14 @@ import time
 def sigmoid(inX):
     return 1.0/(1.0+math.exp(-inX))
 
+
 def tangenth(inX):
     return (1.0*math.exp(inX)-1.0*math.exp(-inX))/(1.0*math.exp(inX)+1.0*math.exp(-inX))
 
+
 def difsigmoid(inX):
     return sigmoid(inX)*(1.0-sigmoid(inX))
+
 
 def sigmoidMatrix(inputMatrix):
     m,n=numpy.shape(inputMatrix)
@@ -28,12 +31,13 @@ def sigmoidMatrix(inputMatrix):
             outMatrix[idx_m,idx_n]=sigmoid(inputMatrix[idx_m,idx_n])
     return outMatrix
 
+
 def loadMNISTimage(absFilePathandName):
     images=open(absFilePathandName,'rb')
     buf=images.read()
     index=0
     magic, numImages , numRows , numColumns = struct.unpack_from('>IIII' , buf , index)
-    print magic, numImages , numRows , numColumns
+    print(magic, numImages , numRows , numColumns)
     index += struct.calcsize('>IIII')
     if magic != 2051:
         raise Exception
@@ -75,13 +79,14 @@ def loadMNISTimage(absFilePathandName):
         #print type(lines),lines
     
     return nextmatrix, numImages
-    
+
+
 def loadMNISTlabels(absFilePathandName):
     labels=open(absFilePathandName,'rb')
     buf=labels.read()
     index=0
     magic, numLabels  = struct.unpack_from('>II' , buf , index)
-    print magic, numLabels
+    print(magic, numLabels)
     index += struct.calcsize('>II')
     if magic != 2049:
         raise Exception
@@ -94,10 +99,11 @@ def loadMNISTlabels(absFilePathandName):
     #    print idx,type(test),test
     return nextmatrix, numLabels
 
+
 class MuiltilayerANN(object):
         #NumofNodesinHiddenlayers should be s list of int
     def __init__(self,NumofHiddenLayers,NumofNodesinHiddenlayers,inputDimension,outputDimension=1,maxIter=50):
-        self.trainDataNum=200
+        self.trainDataNum=2000
         self.decayRate=0.1
         self.punishFactor=0.01
         self.eps=0.000001
@@ -110,6 +116,7 @@ class MuiltilayerANN(object):
         self.inputDi=int(inputDimension)
         self.outputDi=int(outputDimension)
         self.maxIteration=int(maxIter)
+
     def loadtraindata(self,absFilePathandName):
         self.traindata,self.TotalnumoftrainData=loadMNISTimage(absFilePathandName)
         #print self.traindata[1]
@@ -151,11 +158,13 @@ class MuiltilayerANN(object):
             self.weightMatrix.append(numpy.mat(tempMatrix))
             self.B.append(numpy.mat(numpy.zeros((1,self.nodesinLayers[idx+1]))))            
         return 0
+
     def printWeightMatrix(self):
         for idx in range(0,int(self.Nl)-1):
-            print self.weightMatrix[idx]
-            print self.B[idx]
+            print(self.weightMatrix[idx])
+            print(self.B[idx])
         return 0
+
     def forwardPropogation(self,singleDataInput,currentDataIdx):
         #self.tempusedata=inputdata
         Ztemp=[]
@@ -267,7 +276,7 @@ class MuiltilayerANN(object):
         Error_old=10000000000.0
         iter_idx=0
         while iter_idx<self.maxIteration:
-            print "iter num: ",iter_idx,"==============================="
+            print("iter num: ",iter_idx,"===============================")
             iter_idx += 1   
             cDetaW,cDetaB,cError=self.backwardPropogation(self.traindata[0],0)
          
@@ -284,8 +293,8 @@ class MuiltilayerANN(object):
                 #print "Error",cError
             cError/=self.trainDataNum
             cError += self.calpunish()
-            print "old error",Error_old
-            print "new error",cError
+            print("old error",Error_old)
+            print("new error",cError)
             Error_new=cError
             if Error_old-Error_new < self.eps:
                 break
@@ -298,29 +307,28 @@ class MuiltilayerANN(object):
         for idx in range(0,self.trainDataNum):
             Atemp,Ztemp,errorsum=self.forwardPropogation(self.traindata[idx],idx)
             TrainPredict=Atemp[self.Nl-2]
-            print TrainPredict
+            print(TrainPredict)
             Plist=TrainPredict.tolist()
             LabelPredict=Plist[0].index(max(Plist[0]))
-            print "LabelPredict",LabelPredict
-            print "trainLabel",self.trainlabel[idx]
+            print("LabelPredict", LabelPredict)
+            print("trainLabel", self.trainlabel[idx])
             if int(LabelPredict) == int(self.trainlabel[idx]):
                 accuracycount += 1
-        print "accuracy:", float(accuracycount)/float(self.trainDataNum)
+        print("accuracy:", float(accuracycount)/float(self.trainDataNum))
         return
 
+
 if __name__ == '__main__':
-    #loadMNISTimage("D:\Machine Learning\UFLDL\data\common\\train-images-idx3-ubyte")
-    #loadMNISTlabels("D:\Machine Learning\UFLDL\data\common\\train-labels-idx1-ubyte")
-    MyANN=MuiltilayerANN(1,[256],784,10,500)
-    MyANN.loadtraindata("F:\\Machine Learning\\UFLDL\\data\\common\\train-images-idx3-ubyte")
-    MyANN.loadtrainlabel("F:\\Machine Learning\\UFLDL\\data\\common\\train-labels-idx1-ubyte")
+    MyANN = MuiltilayerANN(1, [256], 784, 10, 50)
+    MyANN.loadtraindata("/Users/wangshuai/Downloads/train-images-idx3-ubyte")
+    MyANN.loadtrainlabel("/Users/wangshuai/Downloads/train-labels-idx1-ubyte")
     MyANN.initialweights()
     MyANN.printWeightMatrix()
     
-    tstart=time.time()
+    tstart = time.time()
     MyANN.trainANN()
-    tend=time.time()
-    print "total seconds: ", tend-tstart
+    tend = time.time()
+    print("total seconds: ", tend-tstart)
     MyANN.getTrainAccuracy()
     MyANN.printWeightMatrix()
     pass

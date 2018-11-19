@@ -1,8 +1,8 @@
 #coding=utf-8
 '''
-Created on 2014��11��15��
-
-@author: wangshuai13
+Created on 2014年11月15日
+Modified on 2018年11月19日
+@author: wangshuai
 '''
 import numpy
 #import matplotlib.pyplot as plt
@@ -13,46 +13,40 @@ import time
 
 import threading  
 
+
 class MyThread(threading.Thread):  
-    def __init__(self,threadname,tANN,idx_start,idx_end):  
-        threading.Thread.__init__(self,name=threadname)
+    def __init__(self, threadname, tANN, idx_start, idx_end):
+        threading.Thread.__init__(self, name=threadname)
         self.ANN=tANN
         self.idx_start=idx_start
         self.idx_end=idx_end
+
     def run(self):
-        cDetaW,cDetaB,cError=self.ANN.backwardPropogation(self.ANN.traindata[self.idx_start],0)
-        for idx in range(self.idx_start+1,self.idx_end):
-            DetaWtemp,DetaBtemp,Errortemp=self.ANN.backwardPropogation(self.ANN.traindata[idx],idx)
+        cDetaW, cDetaB, cError=self.ANN.backwardPropogation(self.ANN.traindata[self.idx_start], self.idx_start)
+        for idx in range(self.idx_start+1, self.idx_end):
+            DetaWtemp, DetaBtemp, Errortemp=self.ANN.backwardPropogation(self.ANN.traindata[idx], idx)
             cError += Errortemp
             #cDetaW += DetaWtemp
             #cDetaB += DetaBtemp
-            for idx_W in range(0,len(cDetaW)):
+            for idx_W in range(0, len(cDetaW)):
                 cDetaW[idx_W] += DetaWtemp[idx_W]
                 
-            for idx_B in range(0,len(cDetaB)):
+            for idx_B in range(0, len(cDetaB)):
                 cDetaB[idx_B] += DetaBtemp[idx_B]      
-        return cDetaW,cDetaB,cError
+        return cDetaW, cDetaB, cError
     
     
 def sigmoid(inX):
     return 1.0/(1.0+math.exp(-inX))
 
-def softmax(inMatrix):
-    m,n=numpy.shape(inMatrix)
-    outMatrix=numpy.mat(numpy.zeros((m,n)))
-    soft_sum=0.0
-    for idx in range(0,n):
-        outMatrix[0,idx] = math.exp(inMatrix[0,idx])
-        soft_sum += outMatrix[0,idx]
-    for idx in range(0,n):
-        outMatrix[0,idx] /= soft_sum
-    return  outMatrix
 
 def tangenth(inX):
     return (1.0*math.exp(inX)-1.0*math.exp(-inX))/(1.0*math.exp(inX)+1.0*math.exp(-inX))
 
+
 def difsigmoid(inX):
     return sigmoid(inX)*(1.0-sigmoid(inX))
+
 
 def sigmoidMatrix(inputMatrix):
     m,n=numpy.shape(inputMatrix)
@@ -62,12 +56,13 @@ def sigmoidMatrix(inputMatrix):
             outMatrix[idx_m,idx_n]=sigmoid(inputMatrix[idx_m,idx_n])
     return outMatrix
 
+
 def loadMNISTimage(absFilePathandName,datanum=60000):
     images=open(absFilePathandName,'rb')
     buf=images.read()
     index=0
     magic, numImages , numRows , numColumns = struct.unpack_from('>IIII' , buf , index)
-    print magic, numImages , numRows , numColumns
+    print(magic, numImages , numRows , numColumns)
     index += struct.calcsize('>IIII')
     if magic != 2051:
         raise Exception
@@ -110,13 +105,14 @@ def loadMNISTimage(absFilePathandName,datanum=60000):
         #print type(lines),lines
     
     return nextmatrix, numImages
-    
+
+
 def loadMNISTlabels(absFilePathandName,datanum=60000):
     labels=open(absFilePathandName,'rb')
     buf=labels.read()
     index=0
     magic, numLabels  = struct.unpack_from('>II' , buf , index)
-    print magic, numLabels
+    print(magic, numLabels)
     index += struct.calcsize('>II')
     if magic != 2049:
         raise Exception
@@ -130,12 +126,13 @@ def loadMNISTlabels(absFilePathandName,datanum=60000):
     #    print idx,type(test),test
     return nextmatrix, numLabels
 
+
 class MuiltilayerANN(object):
         #NumofNodesinHiddenlayers should be s list of int
     def __init__(self,NumofHiddenLayers,NumofNodesinHiddenlayers,inputDimension,outputDimension=1,maxIter=50):
-        self.trainDataNum=200
-        self.decayRate=0.05
-        self.punishFactor=0.005
+        self.trainDataNum=2000
+        self.decayRate=0.1
+        self.punishFactor=0.01
         self.eps=0.000001
         self.numofhl=NumofHiddenLayers
         self.Nl=int(NumofHiddenLayers+2)
@@ -146,6 +143,9 @@ class MuiltilayerANN(object):
         self.inputDi=int(inputDimension)
         self.outputDi=int(outputDimension)
         self.maxIteration=int(maxIter)
+        self.Theta=[]
+        self.Ztemp=[]
+
     def setTrainDataNum(self,datanum):
         self.trainDataNum=datanum
         return
@@ -157,8 +157,8 @@ class MuiltilayerANN(object):
     
     def loadtrainlabel(self,absFilePathandName):
         self.trainlabel,self.TotalnumofTrainLabels=loadMNISTlabels(absFilePathandName,self.trainDataNum)
-        if self.TotalnumofTrainLabels != self.TotalnumoftrainData:
-            raise Exception
+        #if self.TotalnumofTrainLabels != self.TotalnumoftrainData:
+            #raise Exception
         return
     
     def initialweights(self):
@@ -191,40 +191,46 @@ class MuiltilayerANN(object):
             self.weightMatrix.append(numpy.mat(tempMatrix))
             self.B.append(numpy.mat(numpy.zeros((1,self.nodesinLayers[idx+1]))))            
         return 0
+
     def printWeightMatrix(self):
         for idx in range(0,int(self.Nl)-1):
-            print self.weightMatrix[idx]
-            print self.B[idx]
+            print(self.weightMatrix[idx])
+            print(self.B[idx])
         return 0
+
     def forwardPropogation(self,singleDataInput,currentDataIdx):
         #self.tempusedata=inputdata
-        Ztemp=[]
+        self.Ztemp=[]
         #Ztemp.append(numpy.mat(inputdata)*self.weightMatrix[0]+self.B[0])
-        Ztemp.append(numpy.mat(singleDataInput)*self.weightMatrix[0]+self.B[0])
+        self.Ztemp.append(numpy.mat(singleDataInput)*self.weightMatrix[0]+self.B[0])
         Atemp=[]
         #print Ztemp
         for idx in range(1,self.Nl-1):
-            Atemp.append(sigmoidMatrix(Ztemp[idx-1]))
-            Ztemp.append(Atemp[idx-1]*self.weightMatrix[idx]+self.B[idx])
+            Atemp.append(sigmoidMatrix(self.Ztemp[idx-1]))
+            self.Ztemp.append(Atemp[idx-1]*self.weightMatrix[idx]+self.B[idx])
             #print Ztemp
-        #softmax
-        #Atemp.append(sigmoidMatrix(Ztemp[self.Nl-2]))
-        Atemp.append( Ztemp[self.Nl-2] )
-        #softmax
-        errorMat=softmax(Atemp[self.Nl-2])
-
-        errorsum=-1.0*math.log(errorMat[0,int(self.trainlabel[currentDataIdx])])
-        return Atemp,Ztemp,errorsum
+        Atemp.append(sigmoidMatrix(self.Ztemp[self.Nl-2]))
+        #store temp error by FP
+        outlabels=numpy.mat(numpy.zeros((1,self.outputDi)))
+        outlabels[0,int(self.trainlabel[currentDataIdx])]=1.0
+        ##########for test#####################
+        #print Atemp[self.Nl-2]
+        errorMat=Atemp[self.Nl-2]-outlabels
+        errorsum=0.0
+        for idx in range(0,self.outputDi):
+            errorsum += 0.5*((errorMat[0,idx])*(errorMat[0,idx]))
+        return Atemp,self.Ztemp,errorsum
     
     def calThetaNl(self,Anl,Y,Znl):
-        thetaNl=softmax(Anl)-Y
+        thetaNl=Anl-Y
+
         return thetaNl
     
-    def backwardPropogation(self,singleDataInput,currentDataIdx):
-        Atemp,Ztemp,temperror=self.forwardPropogation(numpy.mat(singleDataInput),currentDataIdx)
+    def backwardPropogation(self, singleDataInput, currentDataIdx):
+        Atemp,Ztemp,temperror=self.forwardPropogation(numpy.mat(singleDataInput), currentDataIdx)
         #print "single error",temperror
         #Theta is stored inverse
-        Theta=[]
+        self.Theta=[]
         outlabels=numpy.mat(numpy.zeros((1,self.outputDi)))
         outlabels[0,int(self.trainlabel[currentDataIdx])]=1.0
         #print outlabels
@@ -232,13 +238,13 @@ class MuiltilayerANN(object):
         thetaNl=self.calThetaNl(Atemp[self.Nl-2], outlabels, Ztemp[self.Nl-2])
         
         #print thetaNl
-        Theta.append(thetaNl)
+        self.Theta.append(thetaNl)
         
-        #�˴�����������
+        #此处倒过来计算
         for idx in range(1,self.Nl-1):
             inverseidx=self.Nl-1-idx
             #print inverseidx
-            thetaLPlus1=Theta[idx-1]
+            thetaLPlus1=self.Theta[idx-1]
             WeightL=self.weightMatrix[inverseidx]
             Zl=Ztemp[inverseidx-1]
             thetal=thetaLPlus1*WeightL.transpose()
@@ -252,7 +258,7 @@ class MuiltilayerANN(object):
                 #print "dif",difsigmoid(Zl[0,idx_col])
                 thetal[0,idx_col] =thetal[0,idx_col]*difsigmoid(Zl[0,idx_col])
             #print thetal
-            Theta.append(thetal)
+            self.Theta.append(thetal)
         #print Theta
         #DetaW,DetaB are also stored inverse
         DetaW=[]
@@ -263,30 +269,31 @@ class MuiltilayerANN(object):
             #???pay great attention to the deminson of matrix???###
             #######################################################
             #dW=Theta[idx]*Atemp[inverse_idx].transpose()
-            dW=Atemp[inverse_idx].transpose()*Theta[idx]
+            dW=Atemp[inverse_idx].transpose()*self.Theta[idx]
             #print dW
-            dB=Theta[idx]
+            dB=self.Theta[idx]
             DetaW.append(dW)
             DetaB.append(dB)
-        DetaW.append(singleDataInput.transpose()*Theta[self.Nl-2])
-        DetaB.append(Theta[self.Nl-2])
+        DetaW.append(singleDataInput.transpose()*self.Theta[self.Nl-2])
+        DetaB.append(self.Theta[self.Nl-2])
         #print "DetaW",DetaW
         #print "DetaB",DetaB
 
         return DetaW,DetaB,temperror
     
-    def updatePara(self,DetaW,DetaB):
+    def updatePara(self,DetaW,DetaB,dataNum):
         #update parameters
         for idx in range(0,self.Nl-1):
             #print DetaW[idx]
             #print DetaB[idx]
             inverse_idx=self.Nl-1-1-idx
-            self.weightMatrix[inverse_idx] -= self.decayRate*((1.0/self.trainDataNum)*DetaW[idx]+self.punishFactor*self.weightMatrix[inverse_idx])            
+            self.weightMatrix[inverse_idx] -= self.decayRate*((1.0/dataNum)*DetaW[idx]+self.punishFactor*self.weightMatrix[inverse_idx])            
             #self.weightMatrix[inverse_idx] -= (self.decayRate*(DetaW[idx]+self.punishFactor*self.weightMatrix[inverse_idx]))   
-            self.B[inverse_idx] -= self.decayRate*(1.0/self.trainDataNum)*DetaB[idx]
+            self.B[inverse_idx] -= self.decayRate*(1.0/dataNum)*DetaB[idx]
             #self.B[inverse_idx] -= self.decayRate*DetaB[idx]
         #print self.weightMatrix
         #print self.B
+
     def calpunish(self):
         punishment=0.0
         for idx in range(0,self.Nl-1):
@@ -295,17 +302,18 @@ class MuiltilayerANN(object):
             for i_m in range(0,idx_m):
                 for i_n in range(0,idx_n):
                     punishment += temp[i_m,i_n]*temp[i_m,i_n]
-        return 0.5*self.punishFactor*punishment    
+        return 0.5*self.punishFactor*punishment
+
     def trainANN(self):
         Error_old=10000000000.0
         iter_idx=0
         while iter_idx<self.maxIteration:
-            print "iter num: ",iter_idx,"==============================="
+            print("iter num: ",iter_idx,"===============================")
             iter_idx += 1   
-            cDetaW,cDetaB,cError=self.backwardPropogation(self.traindata[0],0)
+            cDetaW, cDetaB, cError=self.backwardPropogation(self.traindata[0],0)
          
             for idx in range(1,self.trainDataNum):
-                DetaWtemp,DetaBtemp,Errortemp=self.backwardPropogation(self.traindata[idx],idx)
+                DetaWtemp, DetaBtemp, Errortemp=self.backwardPropogation(self.traindata[idx],idx)
                 cError += Errortemp
                 #cDetaW += DetaWtemp
                 #cDetaB += DetaBtemp
@@ -317,49 +325,57 @@ class MuiltilayerANN(object):
                 #print "Error",cError
             cError/=self.trainDataNum
             cError += self.calpunish()
-            print "old error",Error_old
-            print "new error",cError
+            print("old error", Error_old)
+            print("new error", cError)
             Error_new=cError
             if Error_old-Error_new < self.eps:
                 break
             Error_old=Error_new
-            self.updatePara(cDetaW, cDetaB)
+            self.updatePara(cDetaW, cDetaB,self.trainDataNum)
+            ####################################
             #self.decayRate /= (1+0.001*iter_idx)
         return
 
     def trainANNwithMultiThread(self):
         Error_old=10000000000.0
         iter_idx=0
-        while iter_idx<self.maxIteration:
-            print "iter num: ",iter_idx,"==============================="
+        while iter_idx < self.maxIteration:
+            print("iter num: ", iter_idx, "===============================")
             iter_idx += 1
-            cDetaW,cDetaB,cError=self.backwardPropogation(self.traindata[0],0)
+            cDetaW, cDetaB, cError=self.backwardPropogation(self.traindata[0],0)
+            #print(cDetaW, cDetaB, cError)
             
-            segNum=int(self.trainDataNum/3)
+            segNum = int(self.trainDataNum/3)
             
-            work1 = MyThread('work1',self,1,segNum)
-            cDetaW1,cDetaB1,cError1=work1.run()
-            work2 = MyThread('work2',self,segNum,int(2*segNum))
-            cDetaW2,cDetaB2,cError2=work2.run()
-            work3 = MyThread('work3',self,int(2*segNum),self.trainDataNum)
-            cDetaW3,cDetaB3,cError3=work3.run()            
+            work1 = MyThread('work1', self, 1, segNum)
+            cDetaW1, cDetaB1, cError1 = work1.run()
+            work2 = MyThread('work2', self, segNum, int(2*segNum))
+            cDetaW2, cDetaB2, cError2 = work2.run()
+            work3 = MyThread('work3', self, int(2*segNum), self.trainDataNum)
+            cDetaW3, cDetaB3, cError3 = work3.run()
             
             while work1.isAlive() or work2.isAlive() or work3.isAlive():
-                time.sleep(0.005)
+                time.sleep(0.0001)
+                print("wait for done")
                 continue
 
-            cDetaW=cDetaW+cDetaW1+cDetaW2+cDetaW3
-            cDetaB=cDetaB+cDetaB1+cDetaB2+cDetaB3
-            cError=cError+cError1+cError2+cError3
-            cError/=self.trainDataNum
+            for idx_W in range(0, len(cDetaW)):
+                cDetaW[idx_W] += (cDetaW1[idx_W]+cDetaW2[idx_W]+cDetaW3[idx_W])
+
+            for idx_B in range(0, len(cDetaB)):
+                cDetaB[idx_B] += (cDetaB1[idx_B]+cDetaB2[idx_B]+cDetaB3[idx_B])
+
+            cError = cError+cError1+cError2+cError3
+            cError /= self.trainDataNum
             cError += self.calpunish()
-            print "old error",Error_old
-            print "new error",cError
+            print("old error", Error_old)
+            print("new error", cError)
             Error_new=cError
             if Error_old-Error_new < self.eps:
                 break
             Error_old=Error_new
-            self.updatePara(cDetaW, cDetaB)
+            self.updatePara(cDetaW, cDetaB, self.trainDataNum)
+            ####################################
             self.decayRate /= (1+0.001*iter_idx)
         return
         
@@ -367,32 +383,31 @@ class MuiltilayerANN(object):
         accuracycount=0
         for idx in range(0,self.trainDataNum):
             Atemp,Ztemp,errorsum=self.forwardPropogation(self.traindata[idx],idx)
-            TrainPredict=softmax(Atemp[self.Nl-2])
-            print TrainPredict
+            TrainPredict=Atemp[self.Nl-2]
+            print(TrainPredict)
             Plist=TrainPredict.tolist()
             LabelPredict=Plist[0].index(max(Plist[0]))
-            print "LabelPredict",LabelPredict
-            print "trainLabel",self.trainlabel[idx]
+            print("LabelPredict",LabelPredict)
+            print("trainLabel",self.trainlabel[idx])
             if int(LabelPredict) == int(self.trainlabel[idx]):
                 accuracycount += 1
-        print "accuracy:", float(accuracycount)/float(self.trainDataNum)
+        print("accuracy:", float(accuracycount)/float(self.trainDataNum))
         return
 
+
 if __name__ == '__main__':
-    #loadMNISTimage("D:\Machine Learning\UFLDL\data\common\\train-images-idx3-ubyte")
-    #loadMNISTlabels("D:\Machine Learning\UFLDL\data\common\\train-labels-idx1-ubyte")
-    MyANN=MuiltilayerANN(1,[256],784,10,1000)
-    MyANN.setTrainDataNum(400)
-    MyANN.loadtraindata("F:\Machine Learning\UFLDL\data\common\\train-images-idx3-ubyte")
-    MyANN.loadtrainlabel("F:\Machine Learning\UFLDL\data\common\\train-labels-idx1-ubyte")
+    MyANN = MuiltilayerANN(1, [256], 784, 10, 50)
+    MyANN.setTrainDataNum(500)
+    MyANN.loadtraindata("/Users/wangshuai/Downloads/train-images-idx3-ubyte")
+    MyANN.loadtrainlabel("/Users/wangshuai/Downloads/train-labels-idx1-ubyte")
     MyANN.initialweights()
     MyANN.printWeightMatrix()
     
-    tstart=time.time()
-    MyANN.trainANN()
-    #MyANN.trainANNwithMultiThread()
-    tend=time.time()
-    print "total seconds: ", tend-tstart
+    tstart = time.time()
+    # MyANN.trainANN()
+    MyANN.trainANNwithMultiThread()
+    tend = time.time()
+    print("total seconds: ", tend-tstart)
     MyANN.getTrainAccuracy()
     MyANN.printWeightMatrix()
     pass

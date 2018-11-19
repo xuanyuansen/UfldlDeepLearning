@@ -1,6 +1,7 @@
 #coding=utf-8
 '''
 Created on 2014年11月30日
+Modified on 2018年11月19日
 @author: Wangliaofan
 '''
 import numpy
@@ -9,18 +10,24 @@ import matplotlib.pyplot as plt
 import math
 import random
 import copy
-#test 
-from BasicMultilayerNeuralNetwork import BMNN2
+import sys
+sys.path.append("..")
+from BasicMultilayerNeuralNetwork import BMNN_MultiThread
 
 
 def sigmoid(inX):
     if 1.0+numpy.exp(-inX)== 0.0:
         return 999999999.999999999
     return 1.0/(1.0+numpy.exp(-inX))
+
+
 def difsigmoid(inX):
     return sigmoid(inX)*(1.0-sigmoid(inX))
+
+
 def tangenth(inX):
     return (1.0*math.exp(inX)-1.0*math.exp(-inX))/(1.0*math.exp(inX)+1.0*math.exp(-inX))
+
 
 def cnn_conv(in_image, filter_map,B,type_func='sigmoid'):
     #in_image[num,feature map,row,col]=>in_image[Irow,Icol]
@@ -51,6 +58,7 @@ def cnn_conv(in_image, filter_map,B,type_func='sigmoid'):
                     raise Exception      
     return out_feature
 
+
 def cnn_maxpooling(out_feature,pooling_size=2,type_pooling="max"):
     k,row,col=numpy.shape(out_feature)
     max_index_Matirx=numpy.zeros((k,row,col))
@@ -65,8 +73,9 @@ def cnn_maxpooling(out_feature,pooling_size=2,type_pooling="max"):
                 max_index=numpy.argmax(temp_matrix)
                 #print max_index
                 #print max_index/pooling_size,max_index%pooling_size
-                max_index_Matirx[k_idx,pooling_size*r_idx+max_index/pooling_size,pooling_size*c_idx+max_index%pooling_size]=1
+                max_index_Matirx[k_idx, pooling_size*r_idx+ int(max_index/pooling_size), pooling_size*c_idx+int(max_index%pooling_size)] = 1
     return out_pooling,max_index_Matirx
+
 
 def poolwithfunc(in_pooling,W,B,type_func='sigmoid'):
     k,row,col=numpy.shape(in_pooling)
@@ -76,6 +85,7 @@ def poolwithfunc(in_pooling,W,B,type_func='sigmoid'):
             for c_idx in range(0,col):
                 out_pooling[k_idx,r_idx,c_idx]=sigmoid(W[k_idx]*in_pooling[k_idx,r_idx,c_idx]+B[k_idx])
     return out_pooling
+
 #out_feature is the out put of conv
 def backErrorfromPoolToConv(theta,max_index_Matirx,out_feature,pooling_size=2):
     k1,row,col=numpy.shape(out_feature)
@@ -88,9 +98,10 @@ def backErrorfromPoolToConv(theta,max_index_Matirx,out_feature,pooling_size=2):
             for idx_col in range( 0, col):
                 error_conv[idx_k,idx_row,idx_col]=\
                     max_index_Matirx[idx_k,idx_row,idx_col]*\
-                    float(theta[idx_k,idx_row/pooling_size,idx_col/pooling_size])*\
+                    float(theta[idx_k, int(idx_row/pooling_size), int(idx_col/pooling_size)])*\
                     difsigmoid(out_feature[idx_k,idx_row,idx_col])
     return error_conv
+
 
 def backErrorfromConvToInput(theta,inputImage):
     k1,row,col=numpy.shape(theta)
@@ -118,12 +129,13 @@ def backErrorfromConvToInput(theta,inputImage):
         detaB[k_idx]=numpy.sum(theta[k_idx,:,:])
     return detaW,detaB
 
+
 def loadMNISTimage(absFilePathandName,datanum=60000):
     images=open(absFilePathandName,'rb')
     buf=images.read()
     index=0
     magic, numImages , numRows , numColumns = struct.unpack_from('>IIII' , buf , index)
-    print magic, numImages , numRows , numColumns
+    print(magic, numImages , numRows , numColumns)
     index += struct.calcsize('>IIII')
     if magic != 2051:
         raise Exception
@@ -136,13 +148,14 @@ def loadMNISTimage(absFilePathandName,datanum=60000):
     #nextmatrix=nextmatrix.reshape(datanum,1,numRows*numColumns)
     nextmatrix=nextmatrix.reshape(datanum,1,numRows,numColumns)  
     return nextmatrix, numImages
-    
+
+
 def loadMNISTlabels(absFilePathandName,datanum=60000):
     labels=open(absFilePathandName,'rb')
     buf=labels.read()
     index=0
     magic, numLabels  = struct.unpack_from('>II' , buf , index)
-    print magic, numLabels
+    print(magic, numLabels)
     index += struct.calcsize('>II')
     if magic != 2049:
         raise Exception
@@ -153,15 +166,16 @@ def loadMNISTlabels(absFilePathandName,datanum=60000):
     nextmatrix=numpy.array(nextmatrix)
     return nextmatrix, numLabels
 
+
 def simpleCNN(numofFilter,filter_size,pooling_size=2,maxIter=1000,imageNum=500):
     decayRate=0.01
-    MNISTimage,num1=loadMNISTimage("F:\Machine Learning\UFLDL\data\common\\train-images-idx3-ubyte",imageNum)
-    print num1
+    MNISTimage,num1=loadMNISTimage("/Users/wangshuai/Downloads/train-images-idx3-ubyte", imageNum)
+    print(num1)
     row,col=numpy.shape(MNISTimage[0,0,:,:])
-    out_Di=numofFilter*((row-filter_size+1)/pooling_size)*((col-filter_size+1)/pooling_size)
-    MLP=BMNN2.MuiltilayerANN(1,[128],out_Di,10,maxIter)
+    out_Di=numofFilter*int((row-filter_size+1)/pooling_size)*int((col-filter_size+1)/pooling_size)
+    MLP=BMNN_MultiThread.MuiltilayerANN(1,[128],out_Di,10,maxIter)
     MLP.setTrainDataNum(imageNum)
-    MLP.loadtrainlabel("F:\Machine Learning\UFLDL\data\common\\train-labels-idx1-ubyte")
+    MLP.loadtrainlabel("/Users/wangshuai/Downloads/train-labels-idx1-ubyte")
     MLP.initialweights()
     #MLP.printWeightMatrix()
     rng = numpy.random.RandomState(23455)
@@ -181,7 +195,7 @@ def simpleCNN(numofFilter,filter_size,pooling_size=2,maxIter=1000,imageNum=500):
         #print numpy.shape(MLP_input)
         DetaW,DetaB,temperror=MLP.backwardPropogation(MLP_input,ImageNum)
         if cIter%50 ==0 :
-            print cIter,"Temp error: ",temperror
+            print(cIter,"Temp error: ",temperror)
         #print numpy.shape(MLP.Theta[MLP.Nl-2])
         #print numpy.shape(MLP.Ztemp[0])
         #print numpy.shape(MLP.weightMatrix[0])
@@ -207,15 +221,16 @@ def simpleCNN(numofFilter,filter_size,pooling_size=2,maxIter=1000,imageNum=500):
         B=copy.deepcopy(B)
         #print "B",B
         MLP.updatePara(DetaW, DetaB, 1)
-    return W_k,B,MLP
+    return W_k, B, MLP
+
 def getTrainAccuracy(numofFilter,filter_size,pooling_size,ImageNum,W_k,B,MLP):
-    MNISTimage,num1=loadMNISTimage("F:\Machine Learning\UFLDL\data\common\\train-images-idx3-ubyte",ImageNum)
+    MNISTimage,num1=loadMNISTimage("/Users/wangshuai/Downloads/train-images-idx3-ubyte",ImageNum)
     MLP.setTrainDataNum(ImageNum)
-    MLP.loadtrainlabel("F:\Machine Learning\UFLDL\data\common\\train-labels-idx1-ubyte")
+    MLP.loadtrainlabel("/Users/wangshuai/Downloads/train-labels-idx1-ubyte")
     #MNISTlabel,num2=loadMNISTimage("F:\Machine Learning\UFLDL\data\common\\train-images-idx3-ubyte",ImageNum)
     row,col=numpy.shape(MNISTimage[0,0,:,:])
     iteration=0
-    out_Di=numofFilter*((row-filter_size+1)/pooling_size)*((col-filter_size+1)/pooling_size)
+    out_Di=numofFilter*int((row-filter_size+1)/pooling_size)*int((col-filter_size+1)/pooling_size)
     accuracycount=0
     while iteration<ImageNum:
         conv_out_map=cnn_conv(MNISTimage[iteration,0,:,:], W_k, B,"sigmoid")
@@ -232,48 +247,49 @@ def getTrainAccuracy(numofFilter,filter_size,pooling_size,ImageNum,W_k,B,MLP):
         if int(LabelPredict) == int(MLP.trainlabel[iteration]):
             accuracycount += 1
         iteration += 1
-        if iteration%50 ==0 :
-            print iteration
-    print "accuracy:", float(accuracycount)/float(ImageNum)
-    return  float(accuracycount)/float(ImageNum)
-    
+        if iteration % 50 == 0:
+            print(iteration)
+    print("accuracy:", float(accuracycount)/float(ImageNum))
+    return float(accuracycount)/float(ImageNum)
+
+
 if __name__ == '__main__':
-    MNISTimage,num1=loadMNISTimage("F:\Machine Learning\UFLDL\data\common\\train-images-idx3-ubyte",1)
-    MNISTlabel,num2=loadMNISTlabels("F:\Machine Learning\UFLDL\data\common\\train-labels-idx1-ubyte",1)
+    MNISTimage, num1 = loadMNISTimage("/Users/wangshuai/Downloads/train-images-idx3-ubyte", 1)
+    MNISTlabel, num2 = loadMNISTlabels("/Users/wangshuai/Downloads/train-labels-idx1-ubyte", 1)
     fig1 = plt.figure("convolution")
-    k=10
-    filter_size=5
+    k = 10
+    filter_size = 5
     rng = numpy.random.RandomState(23455)
     w_shp = (k, filter_size, filter_size)
     w_bound = numpy.sqrt(k * filter_size * filter_size)
-    w_k=rng.uniform(low=-1.0 / w_bound,high=1.0 / w_bound,size=w_shp)
+    w_k = rng.uniform(low=-1.0 / w_bound,high=1.0 / w_bound,size=w_shp)
     B_shp = (k,)
-    B= numpy.asarray(rng.uniform(low=-.5, high=.5, size=B_shp))
+    B = numpy.asarray(rng.uniform(low=-.5, high=.5, size=B_shp))
     #print B
-    out_map=cnn_conv(MNISTimage[0,0,:,:], w_k, B,"sigmoid")
+    out_map = cnn_conv(MNISTimage[0, 0, :, :], w_k, B, "sigmoid")
     for idx in range(0,10):
         plotwindow = fig1.add_subplot(2,5,idx+1)
-        plt.imshow(out_map[idx,:,:], cmap='gray')
+        plt.imshow(out_map[idx, :, :], cmap='gray')
     #plt.show()
     fig2 = plt.figure("max-pooling")
-    out_pooling,max_index=cnn_maxpooling(out_map)
-    for idx in range(0,10):
-        plotwindow = fig2.add_subplot(2,5,idx+1)
-        plt.imshow(out_pooling[idx,:,:], cmap='gray')
+    out_pooling, max_index=cnn_maxpooling(out_map)
+    for idx in range(0, 10):
+        plotwindow = fig2.add_subplot(2, 5, idx+1)
+        plt.imshow(out_pooling[idx, :, :], cmap='gray')
         
     W_pool_shp = (k,)
-    W_pool= numpy.asarray(rng.uniform(low=-1, high=1, size=W_pool_shp))
+    W_pool = numpy.asarray(rng.uniform(low=-1, high=1, size=W_pool_shp))
     B_pool_shp = (k,)
-    B_pool= numpy.asarray(rng.uniform(low=-.5, high=.5, size=B_pool_shp))
+    B_pool = numpy.asarray(rng.uniform(low=-.5, high=.5, size=B_pool_shp))
     fig3 = plt.figure("pooling")
-    pooling=poolwithfunc(out_pooling, W_pool, B_pool)
-    for idx in range(0,10):
-        plotwindow = fig3.add_subplot(2,5,idx+1)
-        plt.imshow(pooling[idx,:,:], cmap='gray')
+    pooling = poolwithfunc(out_pooling, W_pool, B_pool)
+    for idx in range(0, 10):
+        plotwindow = fig3.add_subplot(2, 5, idx+1)
+        plt.imshow(pooling[idx, :, :], cmap='gray')
     #plt.show()
     
-    W_k,B,MLP=simpleCNN(5,5,2,2000,10000)
+    W_k, B, MLP = simpleCNN(5, 5, 2, 2000, 1000)
     #MLP.printWeightMatrix()
-    accu=getTrainAccuracy(5,5,2,4000,W_k,B,MLP)
-    print accu
+    accu = getTrainAccuracy(5, 5, 2, 4000, W_k, B, MLP)
+    print(accu)
     pass
